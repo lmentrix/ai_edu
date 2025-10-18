@@ -1,0 +1,200 @@
+/* Futuristic Background Styles */
+.futuristic-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background: linear-gradient(135deg, #f8faff 0%, #f0f4ff 25%, #e8f0ff 50%, #f0f4ff 75%, #f8faff 100%);
+  overflow: hidden;
+}
+
+.futuristic-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    linear-gradient(rgba(150, 180, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(150, 180, 255, 0.08) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: grid-move 20s linear infinite;
+}
+
+@keyframes grid-move {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(50px, 50px);
+  }
+}
+
+.futuristic-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(150, 180, 255, 0.08) 0%,
+    rgba(180, 200, 255, 0.04) 40%,
+    transparent 70%
+  );
+  animation: pulse-glow 4s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-glow {
+  0% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.futuristic-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    0deg,
+    rgba(248, 250, 255, 0.5) 0%,
+    transparent 50%,
+    rgba(248, 250, 255, 0.5) 100%
+  );
+  pointer-events: none;
+}
+
+/* Enhanced content visibility on futuristic background */
+.futuristic-content {
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(2px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+}
+
+/* Card enhancements for futuristic theme */
+.futuristic-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(200, 210, 255, 0.3);
+  box-shadow:
+    0 8px 32px 0 rgba(150, 170, 255, 0.15),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
+  transition: all 0.3s ease;
+}
+
+/* Navbar specific enhancements */
+.futuristic-navbar {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(200, 210, 255, 0.2);
+  box-shadow:
+    0 4px 20px 0 rgba(150, 170, 255, 0.1),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+}
+
+.futuristic-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 40px 0 rgba(150, 170, 255, 0.25),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.7);
+}
+
+/* Button enhancements */
+.futuristic-button {
+  background: linear-gradient(135deg, rgba(150, 180, 255, 0.15) 0%, rgba(180, 200, 255, 0.15) 100%);
+  border: 1px solid rgba(150, 180, 255, 0.3);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.futuristic-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.futuristic-button:hover::before {
+  left: 100%;
+}
+
+.futuristic-button:hover {
+  background: linear-gradient(135deg, rgba(150, 180, 255, 0.25) 0%, rgba(180, 200, 255, 0.25) 100%);
+  border-color: rgba(150, 180, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+/* Text enhancements */
+.futuristic-text {
+  text-shadow: 0 0 8px rgba(150, 180, 255, 0.3);
+}
+
+.futuristic-heading {
+  background: linear-gradient(135deg, #6495ff 0%, #96b4ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+}
+
+/* Dark mode adjustments */
+.dark .futuristic-bg {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #0f3460 50%, #16213e 75%, #1a1a2e 100%);
+}
+
+.dark .futuristic-card {
+  background: rgba(30, 30, 60, 0.7);
+  border: 1px solid rgba(100, 150, 255, 0.3);
+}
+
+.dark .futuristic-navbar {
+  background: rgba(20, 20, 40, 0.85);
+  border: 1px solid rgba(100, 150, 255, 0.2);
+  box-shadow:
+    0 4px 20px 0 rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+}
+
+.dark .futuristic-button {
+  background: linear-gradient(135deg, rgba(100, 150, 255, 0.2) 0%, rgba(80, 120, 200, 0.2) 100%);
+  border: 1px solid rgba(100, 150, 255, 0.4);
+}
+
+.dark .futuristic-button:hover {
+  background: linear-gradient(135deg, rgba(100, 150, 255, 0.3) 0%, rgba(80, 120, 200, 0.3) 100%);
+  border-color: rgba(100, 150, 255, 0.6);
+}
+
+/* Footer specific enhancements */
+.futuristic-footer {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(200, 210, 255, 0.2);
+  box-shadow:
+    0 -4px 20px 0 rgba(150, 170, 255, 0.1),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+}
+
+.dark .futuristic-footer {
+  background: rgba(20, 20, 40, 0.85);
+  border: 1px solid rgba(100, 150, 255, 0.2);
+  box-shadow:
+    0 -4px 20px 0 rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+}

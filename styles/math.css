@@ -1,0 +1,131 @@
+/* Math-specific animations and styles */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+  50% { box-shadow: 0 0 30px rgba(147, 51, 234, 0.8); }
+}
+
+@keyframes math-symbol {
+  0% { opacity: 0; transform: scale(0) rotate(0deg); }
+  50% { opacity: 0.5; transform: scale(1.2) rotate(180deg); }
+  100% { opacity: 0; transform: scale(0) rotate(360deg); }
+}
+
+.math-symbol-bg {
+  position: absolute;
+  font-size: 2rem;
+  font-weight: bold;
+  opacity: 0.05;
+  color: #3b82f6;
+  animation: math-symbol 20s infinite linear;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.math-tool-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.math-tool-card:hover {
+  transform: translateY(-5px);
+}
+
+.math-gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.math-button {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  transition: all 0.3s ease;
+}
+
+.math-button:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  transform: scale(1.05);
+}
+
+/* Floating math symbols animation */
+.floating-symbols {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.floating-symbol {
+  position: absolute;
+  font-size: 1.5rem;
+  opacity: 0.1;
+  animation: float 6s ease-in-out infinite;
+}
+
+.floating-symbol:nth-child(1) { left: 10%; animation-delay: 0s; }
+.floating-symbol:nth-child(2) { left: 20%; animation-delay: 0.5s; }
+.floating-symbol:nth-child(3) { left: 30%; animation-delay: 1s; }
+.floating-symbol:nth-child(4) { left: 40%; animation-delay: 1.5s; }
+.floating-symbol:nth-child(5) { left: 50%; animation-delay: 2s; }
+.floating-symbol:nth-child(6) { left: 60%; animation-delay: 2.5s; }
+.floating-symbol:nth-child(7) { left: 70%; animation-delay: 3s; }
+.floating-symbol:nth-child(8) { left: 80%; animation-delay: 3.5s; }
+.floating-symbol:nth-child(9) { left: 90%; animation-delay: 4s; }
+
+/* Interactive topic badges */
+.math-topic-badge {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.math-topic-badge:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Conversation box enhancements */
+.math-conversation-box {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.dark .math-conversation-box {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+/* Message bubble animations */
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-bubble {
+  animation: messageSlideIn 0.3s ease-out;
+}
+
+/* Typing indicator animation */
+@keyframes typing {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-10px); }
+}
+
+.typing-dot {
+  animation: typing 1.4s infinite;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
