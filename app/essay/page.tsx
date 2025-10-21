@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,150 +11,178 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { ConversationBox } from "@/components/widgets/Conversation_Box";
 import { Save, Upload, Wand2, FileText } from "lucide-react";
+import { useEssayViewModel } from "@/lib/hooks/useEssayViewModel";
+import { GrammarHighlighter, GrammarIssueTooltip } from "@/components/ui/grammar-highlighter";
+import { GrammarCheckDialog } from "@/components/ui/grammar-check-dialog";
 
 export default function EssayPage() {
-  const [essayContent, setEssayContent] = useState("");
-  const [essayTitle, setEssayTitle] = useState("");
-  const [wordCount, setWordCount] = useState(0);
-  const [selectedTemplate, setSelectedTemplate] = useState("");
-  const [aiText, setAiText] = useState("");
-  const [humanizedText, setHumanizedText] = useState("");
-  const [humanizerStrength, setHumanizerStrength] = useState("medium");
-  const [isGeneratingEssay, setIsGeneratingEssay] = useState(false);
+  const {
+    essayTitle,
+    essayContent,
+    wordCount,
+    selectedTemplate,
+    aiText,
+    humanizedText,
+    humanizerStrength,
+    isGeneratingEssay,
+    isCheckingGrammar,
+    isAnalyzingStructure,
+    isHumanizingText,
+    isGeneratingOutline,
+    setEssayTitle,
+    setEssayContent,
+    setSelectedTemplate,
+    setAiText,
+    setHumanizedText,
+    setHumanizerStrength,
+    generateEssay,
+    checkGrammar,
+    analyzeStructure,
+    humanizeText,
+    generateOutline,
+    saveEssay,
+    exportEssay,
+    addHumanizedTextToEssay,
+    applyGrammarCorrection,
+    applyAllGrammarCorrections,
+    getEssayTemplates,
+    getWritingTips,
+  } = useEssayViewModel();
+
+  // State for grammar checking
+  const [grammarResult, setGrammarResult] = useState<any>(null);
+  const [showGrammarDialog, setShowGrammarDialog] = useState(false);
+  const [selectedIssue, setSelectedIssue] = useState<any>(null);
+  const [showIssueTooltip, setShowIssueTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
   const handleSaveEssay = () => {
-    if (!essayTitle.trim()) {
-      alert('Please enter an essay title before saving.');
-      return;
-    }
-
     try {
-      const essayData = {
-        title: essayTitle,
-        content: essayContent,
-        wordCount,
-        createdAt: new Date().toISOString(),
-        template: selectedTemplate
-      };
-
-      const blob = new Blob([JSON.stringify(essayData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${essayTitle.replace(/[^a-z0-9]/gi, '_')}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      saveEssay();
     } catch (error) {
-      console.error('Error saving essay:', error);
-      alert('Failed to save essay');
+      alert(error instanceof Error ? error.message : 'Failed to save essay');
     }
   };
 
   const handleGenerateEssay = async (topic: string, length: 'short' | 'medium' | 'long' = 'medium') => {
-    if (!topic.trim()) {
-      alert('Please enter a topic for the essay.');
-      return;
-    }
-
-    setIsGeneratingEssay(true);
     try {
-      const response = await fetch('/api/ai/essay', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'generate',
-          prompt: topic,
-          essayType: selectedTemplate || 'expository',
-          length: length,
-        }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        // For streaming responses, we need to handle the stream
-        if (response.body) {
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let generatedText = '';
-          
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n');
-            
-            for (const line of lines) {
-              if (line.startsWith('0:')) {
-                const text = line.slice(2);
-                if (text) {
-                  try {
-                    const parsedText = JSON.parse(text);
-                    generatedText += parsedText;
-                    setEssayContent(generatedText);
-                  } catch {
-                    // If parsing fails, just add the text as is
-                    generatedText += text;
-                    setEssayContent(generatedText);
-                  }
-                }
-              }
-            }
-          }
-          
-          if (!essayTitle) {
-            setEssayTitle(`Essay on ${topic}`);
-          }
-        } else {
-          // For non-streaming responses
-          const data = await response.json();
-          setEssayContent(data.response || "Failed to generate essay.");
-          if (!essayTitle) {
-            setEssayTitle(`Essay on ${topic}`);
-          }
-        }
-      } else {
-        throw new Error('Failed to generate essay');
-      }
+      await generateEssay(topic, length);
     } catch (error) {
-      console.error('Error generating essay:', error);
-      alert('Failed to generate essay. Please try again.');
-    } finally {
-      setIsGeneratingEssay(false);
+      alert(error instanceof Error ? error.message : 'Failed to generate essay. Please try again.');
     }
   };
 
-  const handleExportEssay = () => {
-    const essayText = `${essayTitle}\n\n${essayContent}`;
-    const blob = new Blob([essayText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${essayTitle.replace(/[^a-z0-9]/gi, '_')}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleCheckGrammar = async () => {
+    if (!essayContent.trim()) {
+      alert('Please enter some essay content to check grammar.');
+      return;
+    }
+
+    try {
+      const result = await checkGrammar(essayContent);
+      setGrammarResult(result);
+      setShowGrammarDialog(true);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to check grammar. Please try again.');
+    }
+  };
+
+  const handleApplyCorrection = (issue: any, correction: string) => {
+    applyGrammarCorrection(issue, correction);
+    setShowIssueTooltip(false);
+  };
+
+  const handleApplyAllCorrections = () => {
+    if (grammarResult) {
+      applyAllGrammarCorrections(grammarResult);
+      setShowGrammarDialog(false);
+    }
+  };
+
+  const handleIssueClick = (issue: any, event: React.MouseEvent) => {
+    setSelectedIssue(issue);
+    setTooltipPosition({ x: event.clientX, y: event.clientY });
+    setShowIssueTooltip(true);
+  };
+
+  const handleAnalyzeStructure = async () => {
+    if (!essayContent.trim()) {
+      alert('Please enter some essay content to analyze structure.');
+      return;
+    }
+
+    try {
+      const result = await analyzeStructure(essayContent);
+      
+      // Show structure analysis results
+      let message = `Structure Score: ${result.overallStructure?.score || 0}/100\n\n`;
+      message += `Feedback: ${result.overallStructure?.feedback || 'No feedback available'}\n\n`;
+      
+      if (result.suggestions && result.suggestions.length > 0) {
+        message += "Suggestions:\n";
+        result.suggestions.forEach((suggestion, index) => {
+          message += `${index + 1}. ${suggestion}\n`;
+        });
+      }
+      
+      if (result.strengths && result.strengths.length > 0) {
+        message += "\nStrengths:\n";
+        result.strengths.forEach((strength, index) => {
+          message += `${index + 1}. ${strength}\n`;
+        });
+      }
+      
+      alert(message);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to analyze structure. Please try again.');
+    }
+  };
+
+  const handleGenerateOutline = async () => {
+    if (!essayTitle.trim()) {
+      alert('Please enter a topic for the outline.');
+      return;
+    }
+
+    try {
+      const result = await generateOutline(essayTitle, selectedTemplate);
+      
+      // Show outline results
+      let message = `Outline: ${result.title}\n\n`;
+      message += `Thesis: ${result.thesisStatement}\n\n`;
+      
+      if (result.bodyParagraphs && result.bodyParagraphs.length > 0) {
+        message += "Body Paragraphs:\n";
+        result.bodyParagraphs.forEach((paragraph, index) => {
+          message += `${index + 1}. ${paragraph.topicSentence}\n`;
+        });
+      }
+      
+      alert(message);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to generate outline. Please try again.');
+    }
+  };
+
+  const handleHumanizeText = async () => {
+    if (!aiText.trim()) {
+      alert('Please enter some AI-generated text to humanize.');
+      return;
+    }
+
+    try {
+      await humanizeText(aiText);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to humanize text. Please try again.');
+    }
   };
 
   const handleEssayChange = (value: string) => {
     setEssayContent(value);
-    setWordCount(value.trim().split(/\s+/).filter(word => word.length > 0).length);
   };
 
-  const essayTemplates = [
-    { id: "argumentative", name: "Argumentative Essay", description: "Present a claim and support it with evidence" },
-    { id: "expository", name: "Expository Essay", description: "Explain a topic in a balanced way" },
-    { id: "narrative", name: "Narrative Essay", description: "Tell a story or share an experience" },
-    { id: "descriptive", name: "Descriptive Essay", description: "Paint a picture with words" },
-    { id: "compare", name: "Compare/Contrast", description: "Examine similarities and differences" },
-  ];
-
-  const writingTips = [
-    { category: "Structure", tips: ["Start with a strong hook", "Create a clear thesis statement", "Use topic sentences for each paragraph", "End with a memorable conclusion"] },
-    { category: "Style", tips: ["Vary sentence structure", "Use transition words", "Avoid passive voice", "Be concise and clear"] },
-    { category: "Research", tips: ["Use credible sources", "Take organized notes", "Cite your sources properly", "Check for bias"] },
-  ];
+  const essayTemplates = getEssayTemplates();
+  const writingTips = getWritingTips();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-4 md:p-8">
@@ -166,7 +195,6 @@ export default function EssayPage() {
             Craft compelling essays with our intelligent writing tools, templates, and resources
           </p>
         </div>
-
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
@@ -195,13 +223,45 @@ export default function EssayPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="content">Essay Content</Label>
-                  <Textarea
-                    id="content"
-                    placeholder="Start writing your essay here..."
-                    value={essayContent}
-                    onChange={(e) => handleEssayChange(e.target.value)}
-                    className="min-h-[400px] resize-none text-base"
-                  />
+                  <div className="relative min-h-[400px]">
+                    {grammarResult && grammarResult.issues.length > 0 ? (
+                      <div
+                        className="min-h-[400px] p-3 border border-slate-200 dark:border-slate-700 rounded-md resize-none overflow-auto bg-white dark:bg-slate-800 text-base"
+                        onClick={(e) => {
+                          // Hide tooltip when clicking outside
+                          if ((e.target as HTMLElement).classList.contains('grammar-highlighted-text')) {
+                            return;
+                          }
+                          setShowIssueTooltip(false);
+                        }}
+                      >
+                        <GrammarHighlighter
+                          text={essayContent}
+                          grammarResult={grammarResult}
+                          onIssueClick={handleIssueClick}
+                          className="whitespace-pre-wrap"
+                        />
+                      </div>
+                    ) : (
+                      <Textarea
+                        id="content"
+                        placeholder="Start writing your essay here..."
+                        value={essayContent}
+                        onChange={(e) => handleEssayChange(e.target.value)}
+                        className="min-h-[400px] resize-none text-base"
+                      />
+                    )}
+                  </div>
+                  {grammarResult && (
+                    <div className="flex items-center justify-between mt-2">
+                      <Badge variant={grammarResult.overallScore >= 80 ? "default" : grammarResult.overallScore >= 60 ? "secondary" : "destructive"}>
+                        Grammar Score: {grammarResult.overallScore}/100
+                      </Badge>
+                      <Button variant="outline" size="sm" onClick={() => setShowGrammarDialog(true)}>
+                        View Details ({grammarResult.issues.length} issues)
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2 pt-4">
                   <Button
@@ -213,18 +273,28 @@ export default function EssayPage() {
                     <Wand2 className="h-4 w-4" />
                     {isGeneratingEssay ? "Generating..." : "Generate Essay"}
                   </Button>
-                  <Button variant="outline" className="gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="gap-2"
+                    onClick={handleCheckGrammar}
+                    disabled={isCheckingGrammar}
+                  >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
                     </svg>
-                    Check Grammar
+                    {isCheckingGrammar ? "Checking..." : "Check Grammar"}
                   </Button>
-                  <Button variant="outline" className="gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="gap-2"
+                    onClick={handleAnalyzeStructure}
+                    disabled={isAnalyzingStructure}
+                  >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="12" cy="12" r="10"/>
                       <path d="M12 6v6l4 2"/>
                     </svg>
-                    Analyze Structure
+                    {isAnalyzingStructure ? "Analyzing..." : "Analyze Structure"}
                   </Button>
                   <Button
                     variant="outline"
@@ -237,7 +307,7 @@ export default function EssayPage() {
                   <Button
                     variant="outline"
                     className="gap-2"
-                    onClick={handleExportEssay}
+                    onClick={exportEssay}
                   >
                     <Upload className="h-4 w-4" />
                     Export
@@ -246,6 +316,98 @@ export default function EssayPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Generated Essay Box */}
+          {isGeneratingEssay && (
+            <div className="lg:col-span-2">
+              <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-xl text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <Wand2 className="h-5 w-5 animate-pulse" />
+                    Generating Essay...
+                  </CardTitle>
+                  <CardDescription>AI is creating your essay based on the provided topic</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg min-h-[200px]">
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-slate-200 dark:bg-slate-600 rounded w-full mb-2"></div>
+                      <div className="h-4 bg-slate-200 dark:bg-slate-600 rounded w-full mb-2"></div>
+                      <div className="h-4 bg-slate-200 dark:bg-slate-600 rounded w-3/4 mb-2"></div>
+                      <div className="h-4 bg-slate-200 dark:bg-slate-600 rounded w-full mb-2"></div>
+                      <div className="h-4 bg-slate-200 dark:bg-slate-600 rounded w-5/6"></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Generated Essay Result Box */}
+          {essayContent && !isGeneratingEssay && (
+            <div className="lg:col-span-2">
+              <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xl text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Generated Essay
+                    </CardTitle>
+                    <Badge variant="secondary" className="text-sm">
+                      {wordCount} words
+                    </Badge>
+                  </div>
+                  <CardDescription>Your AI-generated essay is ready for review and editing</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg max-h-[400px] overflow-auto">
+                    <p className="whitespace-pre-wrap text-sm">{essayContent}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={handleCheckGrammar}
+                      disabled={isCheckingGrammar}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+                      </svg>
+                      {isCheckingGrammar ? "Checking..." : "Check Grammar"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={handleAnalyzeStructure}
+                      disabled={isAnalyzingStructure}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 6v6l4 2"/>
+                      </svg>
+                      {isAnalyzingStructure ? "Analyzing..." : "Analyze Structure"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={handleSaveEssay}
+                    >
+                      <Save className="h-4 w-4" />
+                      Save Essay
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={exportEssay}
+                    >
+                      <Upload className="h-4 w-4" />
+                      Export
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           <div className="space-y-6">
             <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
@@ -277,32 +439,42 @@ export default function EssayPage() {
                 <CardDescription>Enhance your essay with AI assistance</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start gap-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start gap-2"
+                  onClick={handleCheckGrammar}
+                  disabled={isCheckingGrammar}
+                >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
                   </svg>
-                    Grammar Check
+                  {isCheckingGrammar ? "Checking..." : "Grammar Check"}
                 </Button>
                 <Button variant="outline" className="w-full justify-start gap-2">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M9 11H3v2h6v-2zm0-4H3v2h6V7zm0 8H3v2h6v-2zm12-8h-6v2h6V7zm0 4h-6v2h6v-2zm0 4h-6v2h6v-2z"/>
                   </svg>
-                    Plagiarism Checker
+                  Plagiarism Checker
                 </Button>
                 <Button variant="outline" className="w-full justify-start gap-2">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                     <polyline points="14 2 14 8 20 8"/>
                   </svg>
-                    Citation Generator
+                  Citation Generator
                 </Button>
-                <Button variant="outline" className="w-full justify-start gap-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start gap-2"
+                  onClick={handleGenerateOutline}
+                  disabled={isGeneratingOutline}
+                >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                     <polyline points="7 10 12 15 17 10"/>
                     <line x1="12" y1="15" x2="12" y2="3"/>
                   </svg>
-                    Outline Generator
+                  {isGeneratingOutline ? "Generating..." : "Outline Generator"}
                 </Button>
               </CardContent>
             </Card>
@@ -354,22 +526,13 @@ export default function EssayPage() {
                 </div>
                 <Button
                   className="w-full gap-2"
-                  onClick={() => {
-                    // Simulate humanization process
-                    const simulatedHumanized = aiText
-                      .replace(/\b(therefore|consequently|furthermore|moreover)\b/gi, "so")
-                      .replace(/\b(in order to|so as to)\b/gi, "to")
-                      .replace(/\b(utilize|utilizes|utilized)\b/gi, "use")
-                      .replace(/\b(ameliorate|ameliorated)\b/gi, "improve")
-                      .replace(/\b(commence|commenced)\b/gi, "start")
-                      + (humanizerStrength === "strong" ? " I think this makes sense from my perspective." : "");
-                    setHumanizedText(simulatedHumanized);
-                  }}
+                  onClick={handleHumanizeText}
+                  disabled={isHumanizingText}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
                   </svg>
-                  Humanize Text
+                  {isHumanizingText ? "Humanizing..." : "Humanize Text"}
                 </Button>
                 {humanizedText && (
                   <div className="space-y-2">
@@ -381,11 +544,7 @@ export default function EssayPage() {
                       variant="outline"
                       size="sm"
                       className="w-full gap-2"
-                      onClick={() => {
-                        setEssayContent(essayContent + (essayContent ? "\n\n" : "") + humanizedText);
-                        setHumanizedText("");
-                        setAiText("");
-                      }}
+                      onClick={addHumanizedTextToEssay}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5Z"/>
@@ -449,6 +608,35 @@ export default function EssayPage() {
           </Card>
         </div>
       </div>
+      
+      {/* Grammar Check Dialog */}
+      {grammarResult && (
+        <GrammarCheckDialog
+          isOpen={showGrammarDialog}
+          onClose={() => setShowGrammarDialog(false)}
+          grammarResult={grammarResult}
+          onApplyCorrection={handleApplyCorrection}
+          onApplyAllCorrections={handleApplyAllCorrections}
+        />
+      )}
+      
+      {/* Grammar Issue Tooltip */}
+      {showIssueTooltip && selectedIssue && (
+        <div
+          className="fixed z-50"
+          style={{
+            left: `${Math.min(tooltipPosition.x, window.innerWidth - 320)}px`,
+            top: `${Math.min(tooltipPosition.y, window.innerHeight - 200)}px`
+          }}
+        >
+          <GrammarIssueTooltip
+            issue={selectedIssue}
+            onApplyCorrection={handleApplyCorrection}
+            onClose={() => setShowIssueTooltip(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }
+                     
