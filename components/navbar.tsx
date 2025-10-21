@@ -5,12 +5,32 @@ import Link from "next/link"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { useSession } from "@/lib/auth-client"
+import SignOutButton from "@/components/auth/sign-out-button"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { data: session } = useSession()
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
+  }
+
+  // Get user initials for avatar
+  const getUserInitials = (name?: string | null, email?: string | null) => {
+    if (name) {
+      return name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    }
+    if (email) {
+      return email.slice(0, 2).toUpperCase()
+    }
+    return 'U'
   }
 
   return (
@@ -48,28 +68,54 @@ export function Navbar() {
               Dashboard
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
             </Link>
+            <Link href="/payment" className="text-sm font-medium text-foreground/90 transition-colors hover:text-primary relative group futuristic-text px-3 py-2 rounded-md hover:bg-accent/50">
+              Pricing
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
+            </Link>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="hidden lg:flex h-9 w-9 futuristic-button text-foreground/80 hover:text-foreground">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-              </svg>
-              <span className="sr-only">Notifications</span>
-            </Button>
-            
-            <Button variant="ghost" size="icon" className="hidden lg:flex h-9 w-9 futuristic-button text-foreground/80 hover:text-foreground">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-                <circle cx="12" cy="12" r="10"></circle>
-                <path d="M12 6v6l4 2"></path>
-              </svg>
-              <span className="sr-only">Settings</span>
-            </Button>
+            {session ? (
+              <>
+                <Button variant="ghost" size="icon" className="hidden lg:flex h-9 w-9 futuristic-button text-foreground/80 hover:text-foreground">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                  </svg>
+                  <span className="sr-only">Notifications</span>
+                </Button>
+                
+                <Button variant="ghost" size="icon" className="hidden lg:flex h-9 w-9 futuristic-button text-foreground/80 hover:text-foreground">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 6v6l4 2"></path>
+                  </svg>
+                  <span className="sr-only">Settings</span>
+                </Button>
 
-            <Button asChild className="hidden lg:flex h-9 px-4 futuristic-button bg-primary/10 hover:bg-primary/20 border border-primary/20 text-foreground">
-              <Link href="/auth">Sign In</Link>
-            </Button>
+                <div className="hidden lg:flex items-center gap-2">
+                  <div className="flex items-center gap-2 mr-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary/20 text-primary text-xs font-medium">
+                        {getUserInitials(session.user.name, session.user.email)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-foreground">
+                        {session.user.name || 'User'}
+                      </span>
+                      <span className="text-xs text-foreground/60">
+                        {session.user.email}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <Button asChild className="hidden lg:flex h-9 px-4 futuristic-button bg-primary/10 hover:bg-primary/20 border border-primary/20 text-foreground">
+                <Link href="/auth">Sign In</Link>
+              </Button>
+            )}
 
             {/* Mobile Menu Button */}
             <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9 futuristic-button text-foreground/80 hover:text-foreground" onClick={toggleMenu}>
@@ -131,10 +177,38 @@ export function Navbar() {
                 <span className="mr-3">📊</span>
                 Dashboard
               </Link>
+              <Link
+                href="/payment"
+                className="flex items-center py-3 px-4 text-sm font-medium text-foreground/90 rounded-md transition-colors hover:bg-accent/70 hover:text-accent-foreground futuristic-text"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <span className="mr-3">💎</span>
+                Pricing
+              </Link>
               <div className="pt-4 mt-2 border-t">
-                <Button asChild className="w-full justify-center futuristic-button bg-primary/10 hover:bg-primary/20 border border-primary/20 text-foreground">
-                  <Link href="/auth" onClick={() => setIsMenuOpen(false)}>Sign In</Link>
-                </Button>
+                {session ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 px-4 py-2">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-primary/20 text-primary text-sm font-medium">
+                          {getUserInitials(session.user.name, session.user.email)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-foreground">
+                          {session.user.name || 'User'}
+                        </span>
+                        <span className="text-xs text-foreground/60">
+                          {session.user.email}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Button asChild className="w-full justify-center futuristic-button bg-primary/10 hover:bg-primary/20 border border-primary/20 text-foreground">
+                    <Link href="/auth" onClick={() => setIsMenuOpen(false)}>Sign In</Link>
+                  </Button>
+                )}
               </div>
             </div>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { ConversationBox } from "@/components/widgets/Conversation_Box";
+import { Save, Upload, Wand2, FileText } from "lucide-react";
 
 export default function EssayPage() {
   const [essayContent, setEssayContent] = useState("");
@@ -17,6 +19,122 @@ export default function EssayPage() {
   const [aiText, setAiText] = useState("");
   const [humanizedText, setHumanizedText] = useState("");
   const [humanizerStrength, setHumanizerStrength] = useState("medium");
+  const [isGeneratingEssay, setIsGeneratingEssay] = useState(false);
+
+  const handleSaveEssay = () => {
+    if (!essayTitle.trim()) {
+      alert('Please enter an essay title before saving.');
+      return;
+    }
+
+    try {
+      const essayData = {
+        title: essayTitle,
+        content: essayContent,
+        wordCount,
+        createdAt: new Date().toISOString(),
+        template: selectedTemplate
+      };
+
+      const blob = new Blob([JSON.stringify(essayData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${essayTitle.replace(/[^a-z0-9]/gi, '_')}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error saving essay:', error);
+      alert('Failed to save essay');
+    }
+  };
+
+  const handleGenerateEssay = async (topic: string, length: 'short' | 'medium' | 'long' = 'medium') => {
+    if (!topic.trim()) {
+      alert('Please enter a topic for the essay.');
+      return;
+    }
+
+    setIsGeneratingEssay(true);
+    try {
+      const response = await fetch('/api/ai/essay', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'generate',
+          prompt: topic,
+          essayType: selectedTemplate || 'expository',
+          length: length,
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // For streaming responses, we need to handle the stream
+        if (response.body) {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let generatedText = '';
+          
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+            
+            for (const line of lines) {
+              if (line.startsWith('0:')) {
+                const text = line.slice(2);
+                if (text) {
+                  try {
+                    const parsedText = JSON.parse(text);
+                    generatedText += parsedText;
+                    setEssayContent(generatedText);
+                  } catch {
+                    // If parsing fails, just add the text as is
+                    generatedText += text;
+                    setEssayContent(generatedText);
+                  }
+                }
+              }
+            }
+          }
+          
+          if (!essayTitle) {
+            setEssayTitle(`Essay on ${topic}`);
+          }
+        } else {
+          // For non-streaming responses
+          const data = await response.json();
+          setEssayContent(data.response || "Failed to generate essay.");
+          if (!essayTitle) {
+            setEssayTitle(`Essay on ${topic}`);
+          }
+        }
+      } else {
+        throw new Error('Failed to generate essay');
+      }
+    } catch (error) {
+      console.error('Error generating essay:', error);
+      alert('Failed to generate essay. Please try again.');
+    } finally {
+      setIsGeneratingEssay(false);
+    }
+  };
+
+  const handleExportEssay = () => {
+    const essayText = `${essayTitle}\n\n${essayContent}`;
+    const blob = new Blob([essayText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${essayTitle.replace(/[^a-z0-9]/gi, '_')}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleEssayChange = (value: string) => {
     setEssayContent(value);
@@ -48,6 +166,7 @@ export default function EssayPage() {
             Craft compelling essays with our intelligent writing tools, templates, and resources
           </p>
         </div>
+
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
@@ -85,7 +204,16 @@ export default function EssayPage() {
                   />
                 </div>
                 <div className="flex flex-wrap gap-2 pt-4">
-                  <Button variant="default" className="gap-2">
+                  <Button
+                    variant="default"
+                    className="gap-2"
+                    onClick={() => handleGenerateEssay(essayTitle || "current topic", "medium")}
+                    disabled={isGeneratingEssay}
+                  >
+                    <Wand2 className="h-4 w-4" />
+                    {isGeneratingEssay ? "Generating..." : "Generate Essay"}
+                  </Button>
+                  <Button variant="outline" className="gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
                     </svg>
@@ -98,19 +226,20 @@ export default function EssayPage() {
                     </svg>
                     Analyze Structure
                   </Button>
-                  <Button variant="outline" className="gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14 2 14 8 20 8"/>
-                    </svg>
-                    Save Draft
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={handleSaveEssay}
+                  >
+                    <Save className="h-4 w-4" />
+                    Save Essay
                   </Button>
-                  <Button variant="outline" className="gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="7 10 12 15 17 10"/>
-                      <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={handleExportEssay}
+                  >
+                    <Upload className="h-4 w-4" />
                     Export
                   </Button>
                 </div>
@@ -269,6 +398,23 @@ export default function EssayPage() {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* AI Essay Assistant */}
+        <div className="mt-8">
+          <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-2xl text-slate-800 dark:text-slate-100">AI Essay Assistant</CardTitle>
+              <CardDescription>Get help with essay writing, brainstorming, and improvement</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ConversationBox
+                title="Essay Writing Assistant"
+                placeholder="Ask me for help with your essay, brainstorming ideas, or writing techniques..."
+                subject="essay"
+              />
+            </CardContent>
+          </Card>
         </div>
 
         <div className="mt-8">

@@ -1,20 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ConversationBox } from "@/components/widgets/Conversation_Box";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calculator, FunctionSquare, PieChart, TrendingUp, BrainCircuit, Atom } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calculator, FunctionSquare, PieChart, TrendingUp, BrainCircuit, Atom, Save, Upload } from "lucide-react";
 import { Calculator as CalculatorComponent } from "@/components/math/Calculator";
 import { FormulaLibrary } from "@/components/math/FormulaLibrary";
 import { MathJaxComponent } from "@/components/math/MathJaxComponent";
+import { mathEngine } from "@/lib/mathEngine";
 import "@/styles/math.css";
 
 export default function MathPage() {
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [calculationHistory, setCalculationHistory] = useState<Array<{
+    expression: string;
+    result: string;
+    timestamp: Date;
+  }>>([]);
   
   const mathSymbols = ["∫", "∑", "√", "π", "∞", "Δ", "θ", "∝", "∂"];
+
+  const saveCalculationHistory = (newEntry: { expression: string; result: string }) => {
+    const updatedHistory = [
+      ...calculationHistory,
+      { ...newEntry, timestamp: new Date() }
+    ].slice(-20); // Keep only the last 20 calculations
+
+    setCalculationHistory(updatedHistory);
+  };
+
+  const handleSaveWork = () => {
+    try {
+      const workData = {
+        calculationHistory,
+        selectedTopic,
+        activeTool,
+        timestamp: new Date().toISOString()
+      };
+
+      const blob = new Blob([JSON.stringify(workData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `math_work_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error saving math work:', error);
+      alert('Failed to save math work');
+    }
+  };
   
   const mathTools = [
     {
@@ -90,6 +128,73 @@ export default function MathPage() {
             Ask questions about mathematical concepts, get help with problem-solving, and explore various math topics with our AI assistant.
           </p>
         </div>
+
+        {/* Calculation History Actions */}
+        {calculationHistory.length > 0 && (
+          <div className="mb-6">
+            <Card className="futuristic-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2">
+                  <Save className="h-5 w-5" />
+                  Calculation Tools
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSaveWork}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Work
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const historyText = calculationHistory.map(
+                        item => `${item.timestamp.toLocaleString()}: ${item.expression} = ${item.result}`
+                      ).join('\n\n');
+                      
+                      const blob = new Blob([historyText], { type: 'text/plain' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `calculation_history_${Date.now()}.txt`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Export History
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Calculation History */}
+        {calculationHistory.length > 0 && (
+          <div className="mb-6">
+            <Card className="futuristic-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Recent Calculations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {calculationHistory.slice(-5).reverse().map((item, index) => (
+                    <div key={index} className="flex justify-between items-center p-2 bg-slate-50 dark:bg-slate-800 rounded">
+                      <span className="text-sm font-mono">{item.expression}</span>
+                      <span className="text-sm font-semibold">= {item.result}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
         
         {/* Interactive Tools Section */}
         <div className="mb-8">
@@ -228,6 +333,7 @@ export default function MathPage() {
             <ConversationBox
               title="Math Assistant"
               placeholder="Ask me anything about mathematics..."
+              subject="math"
             />
           </div>
         </div>

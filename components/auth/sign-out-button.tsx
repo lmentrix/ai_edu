@@ -6,7 +6,12 @@ import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function SignOutButton() {
+interface SignOutButtonProps {
+  variant?: "default" | "ghost" | "outline";
+  className?: string;
+}
+
+export default function SignOutButton({ variant = "ghost", className }: SignOutButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
@@ -22,11 +27,16 @@ export default function SignOutButton() {
     setIsLoading(false);
   };
 
+  const defaultClassName = variant === "ghost"
+    ? "h-9 px-4 futuristic-button text-foreground/80 hover:text-foreground hover:bg-accent/50"
+    : "w-full justify-center futuristic-button bg-primary/10 hover:bg-primary/20 border border-primary/20 text-foreground";
+
   return (
-    <Button 
-      variant="outline" 
+    <Button
+      variant={variant}
       onClick={handleSignOut}
       disabled={isLoading}
+      className={className || defaultClassName}
     >
       {isLoading ? (
         <>

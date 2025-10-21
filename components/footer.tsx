@@ -89,27 +89,27 @@ export function Footer() {
             <h3 className="text-sm font-semibold text-foreground futuristic-heading">Resources</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
+                <Link href="/resources/documentation" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
                   Documentation
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
+                <Link href="/resources/tutorials" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
                   Tutorials
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
+                <Link href="/resources/blog" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
                   Blog
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
+                <Link href="/resources/community" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
                   Community
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
+                <Link href="/resources/support" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
                   Support
                 </Link>
               </li>
@@ -121,22 +121,22 @@ export function Footer() {
             <h3 className="text-sm font-semibold text-foreground futuristic-heading">Legal</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
+                <Link href="/legal/privacy-policy" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
+                <Link href="/legal/terms-of-service" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
                   Terms of Service
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
+                <Link href="/legal/cookie-policy" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
                   Cookie Policy
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
+                <Link href="/legal/gdpr" className="text-sm text-foreground/70 hover:text-primary transition-colors futuristic-text">
                   GDPR
                 </Link>
               </li>
