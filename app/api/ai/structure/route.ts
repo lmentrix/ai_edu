@@ -68,7 +68,7 @@ export async function POST(request: Request) {
             system: systemPrompt,
             prompt: `Please analyze the structure of this essay: "${text}"`,
             temperature: 0.3,
-            maxTokens: 2000,
+            maxOutputTokens: 2000,
         });
 
         return result.toUIMessageStreamResponse();

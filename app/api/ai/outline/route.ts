@@ -29,7 +29,7 @@ export async function POST(request: Request) {
         compare: 'compare and contrast essay with balanced analysis of similarities and differences'
     };
 
-    const systemPrompt = `You are an expert academic writer and essay planner. Create a comprehensive outline for a ${essayTypeMap[essayType || 'expository']} on the topic: "${topic}". The outline should include ${lengthMap[length || 'medium']}.
+    const systemPrompt = `You are an expert academic writer and essay planner. Create a comprehensive outline for a ${essayTypeMap["expository"]} on the topic: "${topic}". The outline should include ${lengthMap["medium"]}.
 
     Provide your outline in the following JSON format:
     {
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
             system: systemPrompt,
             prompt: `Create a detailed essay outline for: ${topic}`,
             temperature: 0.7,
-            maxTokens: 2000,
+            maxOutputTokens: 2000,
         });
 
         return result.toUIMessageStreamResponse();

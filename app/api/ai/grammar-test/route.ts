@@ -1,5 +1,5 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { streamObject } from 'ai';
+import { generateObject } from 'ai';
 import { z } from 'zod';
 import {
     grammarCache,
@@ -32,19 +32,19 @@ const grammarAnalysisSchema = z.object({
 
 export async function POST(request: Request) {
     try {
-        log('[Grammar API] Request received');
+        log('[Grammar Test API] Request received');
         
         // Check API key configuration
         const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
         if (!apiKey) {
-            logError('[Grammar API] GOOGLE_GENERATIVE_AI_API_KEY is not configured');
+            logError('[Grammar Test API] GOOGLE_GENERATIVE_AI_API_KEY is not configured');
             return createErrorResponse('Server configuration error: API key not found', 500);
         }
         
-        log('[Grammar API] API key configured');
+        log('[Grammar Test API] API key configured');
         
         const { text } = await request.json();
-        log('[Grammar API] Text to analyze:', text?.substring(0, 50) + '...');
+        log('[Grammar Test API] Text to analyze:', text?.substring(0, 50) + '...');
 
         if (!text) {
             return createErrorResponse('Text is required', 400);
@@ -53,18 +53,8 @@ export async function POST(request: Request) {
         // Check cache first
         const cachedResult = grammarCache.get(text);
         if (cachedResult) {
-            log('[Grammar API] Cache hit for text');
-            // Create a streaming response from cached data
-            const stream = new ReadableStream({
-                start(controller) {
-                    controller.enqueue(new TextEncoder().encode(JSON.stringify(cachedResult)));
-                    controller.close();
-                }
-            });
-            
-            return new Response(stream, {
-                headers: { 'Content-Type': 'application/json' }
-            });
+            log('[Grammar Test API] Cache hit for text');
+            return Response.json(cachedResult);
         }
 
         const systemPrompt = `You are an expert grammar and writing assistant. Analyze the provided text for:
@@ -89,28 +79,28 @@ Provide concise feedback.`;
         // Create abort controller for request cancellation
         const controller = createAbortController(30000); // 30 second timeout
         
-        log('[Grammar API] Calling Google AI with streamObject');
+        log('[Grammar Test API] Calling Google AI with generateObject (non-streaming)');
         
-        // Create the streaming request with timeout
-        const streamPromise = streamObject({
+        // Create the request with timeout
+        const resultPromise = generateObject({
             model: google('gemini-2.5-flash'),
             system: systemPrompt,
             prompt: `Please analyze and correct this text: "${text}"`,
             schema: grammarAnalysisSchema,
             temperature: 0.3,
             abortSignal: controller.signal,
-            onError({ error }) {
-                logError('[Grammar API] Google AI Error:', error);
-            },
         });
 
-        // Apply timeout to the streaming request
-        const result = await withTimeout(streamPromise, 30000);
+        // Apply timeout to the request
+        const result = await withTimeout(resultPromise, 30000);
         
-        log('[Grammar API] Creating text stream response');
-        return result.toTextStreamResponse();
+        // Cache the result
+        grammarCache.set(text, result.object);
+        
+        log('[Grammar Test API] Analysis complete');
+        return Response.json(result.object);
     } catch (error) {
-        logError('[Grammar API] Grammar check error:', error);
+        logError('[Grammar Test API] Grammar check error:', error);
         
         // Handle different error types
         if (error instanceof Error) {

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FuturisticBackground } from "@/components/ui/futuristic-background";
 import { createCheckoutSession, redirectToCheckout, getStripe } from "@/lib/stripe-client";
+import ContactUs from "@/components/widgets/contact/ContactUs";
 
 export default function PaymentPage() {
   const [loading, setLoading] = useState(false);
@@ -216,6 +217,8 @@ export default function PaymentPage() {
 
         </div>
       </div>
+        <ContactUs/>
     </div>
+
   );
 }

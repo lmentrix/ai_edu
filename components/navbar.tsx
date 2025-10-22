@@ -34,9 +34,9 @@ export function Navbar() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg futuristic-navbar">
+    <nav className=" top-0 left-0 right-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg futuristic-navbar glass-morphism">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-20 items-center justify-between">
           <div className="flex items-center">
             <Link href="/public" className="flex items-center space-x-3">
               <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg futuristic-button">
@@ -134,7 +134,7 @@ export function Navbar() {
 
       {/* Mobile Navigation */}
       {isMenuOpen && (
-        <div className="lg:hidden border-t border-border/50 bg-background/80 backdrop-blur-lg futuristic-navbar">
+        <div className="lg:hidden border-t border-border/50 bg-background/80 backdrop-blur-lg futuristic-navbar glass-morphism">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="grid grid-cols-1 gap-1">
               <Link
