@@ -167,6 +167,7 @@
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  color: black;
 }
 
 .futuristic-button::before {
@@ -188,6 +189,7 @@
   background: linear-gradient(135deg, rgba(150, 180, 255, 0.25) 0%, rgba(180, 200, 255, 0.25) 100%);
   border-color: rgba(150, 180, 255, 0.5);
   transform: translateY(-1px);
+  color: black;
 }
 
 /* Text enhancements */
@@ -263,11 +265,13 @@
 .dark .futuristic-button {
   background: linear-gradient(135deg, rgba(100, 150, 255, 0.2) 0%, rgba(80, 120, 200, 0.2) 100%);
   border: 1px solid rgba(100, 150, 255, 0.4);
+  color: black;
 }
 
 .dark .futuristic-button:hover {
   background: linear-gradient(135deg, rgba(100, 150, 255, 0.3) 0%, rgba(80, 120, 200, 0.3) 100%);
   border-color: rgba(100, 150, 255, 0.6);
+  color: black;
 }
 
 /* Footer specific enhancements */

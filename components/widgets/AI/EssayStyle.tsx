@@ -1,74 +1,26 @@
 "use client"
 
-import React, { useState } from 'react'
+import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Check, PenTool } from 'lucide-react'
+import { useEssayModeStore } from '@/stores/essayMode'
 
 const EssayStyle = () => {
-    const [selectedStyle, setSelectedStyle] = useState<string>('')
-
-    const essayStyles = [
-        {
-            value: 'academic',
-            label: 'Academic',
-            description: 'Formal, evidence-based writing with proper citations',
-            color: 'from-blue-500 to-blue-600'
-        },
-        {
-            value: 'narrative',
-            label: 'Narrative',
-            description: 'Storytelling approach with personal experiences',
-            color: 'from-purple-500 to-purple-600'
-        },
-        {
-            value: 'persuasive',
-            label: 'Persuasive',
-            description: 'Convincing arguments to sway the reader',
-            color: 'from-green-500 to-green-600'
-        },
-        {
-            value: 'expository',
-            label: 'Expository',
-            description: 'Informative writing that explains a topic',
-            color: 'from-orange-500 to-orange-600'
-        },
-        {
-            value: 'descriptive',
-            label: 'Descriptive',
-            description: 'Vivid details that paint a picture',
-            color: 'from-pink-500 to-pink-600'
-        },
-        {
-            value: 'argumentative',
-            label: 'Argumentative',
-            description: 'Logical reasoning with counterarguments',
-            color: 'from-red-500 to-red-600'
-        },
-        {
-            value: 'compare-contrast',
-            label: 'Compare & Contrast',
-            description: 'Analyzing similarities and differences',
-            color: 'from-indigo-500 to-indigo-600'
-        },
-        {
-            value: 'cause-effect',
-            label: 'Cause & Effect',
-            description: 'Explaining relationships between events',
-            color: 'from-teal-500 to-teal-600'
-        }
-    ]
+    const {
+        selectedStyle,
+        availableStyles,
+        setSelectedStyle,
+        applyStyle
+    } = useEssayModeStore()
 
     const handleStyleSelect = (value: string) => {
         setSelectedStyle(value)
     }
 
     const handleApplyStyle = () => {
-        if (selectedStyle) {
-            console.log(`Applied essay style: ${selectedStyle}`)
-            // Here you would typically apply the style to the essay
-        }
+        applyStyle()
     }
 
     return (
@@ -79,11 +31,16 @@ const EssayStyle = () => {
                         <PenTool className="h-5 w-5 text-white" />
                     </div>
                     Essay Style
+                    {selectedStyle && (
+                        <Badge variant="outline" className="ml-auto futuristic-button">
+                            {availableStyles.find(s => s.value === selectedStyle)?.label}
+                        </Badge>
+                    )}
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
                 <div className="space-y-2">
-                    {essayStyles.map((style) => (
+                    {availableStyles.map((style) => (
                         <div
                             key={style.value}
                             onClick={() => handleStyleSelect(style.value)}
@@ -111,7 +68,7 @@ const EssayStyle = () => {
                 <Button
                     onClick={handleApplyStyle}
                     disabled={!selectedStyle}
-                    className="w-full futuristic-button mt-4"
+                    className="w-full futuristic-button mt-4 "
                 >
                     Apply Style
                 </Button>

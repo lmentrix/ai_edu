@@ -5,6 +5,7 @@ import "../styles/futuristic.css";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { DynamicBackgroundWidget } from "@/components/widgets/DynamicBackgroundWidget";
+import React from "react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,9 +33,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <DynamicBackgroundWidget />
-        <div className="flex flex-col min-h-screen relative z-10 ">
+        <div className="flex flex-col min-h-screen relative z-10  ">
           <Navbar />
-          <main className="flex-1 futuristic-content pt-20">
+          <main className="flex-1  futuristic-content pt-20">
             {children}
           </main>
           <Footer />

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ConversationBox } from "@/components/widgets/Conversation_Box";
+import { ConversationBox } from "@/components/widgets/AI/Conversation_Box";
 import { Beaker, Atom, Microscope, Telescope, Dna, Zap, Save, Upload, BookOpen } from "lucide-react";
 
 export default function SciencePage() {

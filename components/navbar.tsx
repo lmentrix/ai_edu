@@ -9,7 +9,7 @@ import { useSession } from "@/lib/auth-client"
 import SignOutButton from "@/components/auth/sign-out-button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
-export function Navbar() {
+export function Navbar({ className }: { className?: string }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { data: session } = useSession()
 
@@ -34,7 +34,7 @@ export function Navbar() {
   }
 
   return (
-    <nav className=" top-0 left-0 right-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg futuristic-navbar glass-morphism">
+    <nav className={cn(" top-0 left-0 right-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg futuristic-navbar glass-morphism", className)}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-20 items-center justify-between">
           <div className="flex items-center">

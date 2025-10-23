@@ -1,6 +1,6 @@
 "use client";
 
-import { ConversationBox } from "@/components/widgets/Conversation_Box";
+import { ConversationBox } from "@/components/widgets/AI/Conversation_Box";
 import { ConvoTimeline } from "@/components/widgets/Convo_Timeline";
 import { TimelineItem } from "@/types";
 import { useState, useEffect } from "react";

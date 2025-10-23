@@ -1,11 +1,11 @@
 'use client'
 
 import React from 'react'
-import EssayBox from "@/components/widgets/EssayBox";
-import EssayStyle from "@/components/widgets/EssayStyle";
-import Humanize from "@/components/widgets/Humanize";
+import EssayBox from "@/components/widgets/AI/EssayBox";
+import EssayStyle from "@/components/widgets/AI/EssayStyle";
+import Humanize from "@/components/widgets/AI/Humanize";
 import { FuturisticBackground } from "@/components/ui/futuristic-background";
-import GeneratedEssay from "@/components/widgets/GeneratedEssay";
+import HumanizeCard from "@/components/widgets/AI/HumanizeCard";
 
 const Page = () => {
     return (
@@ -26,7 +26,7 @@ const Page = () => {
                     {/* Main Essay Editor - Takes 2 columns on large screens */}
                     <div className="lg:col-span-2">
                         <EssayBox />
-                        <GeneratedEssay/>
+                        <HumanizeCard/>
                     </div>
 
                     {/* Sidebar Tools - Takes 1 column on large screens */}
@@ -72,8 +72,13 @@ const Page = () => {
                         <p className="text-sm text-muted-foreground">
                             Humanize AI-generated text to sound natural and engaging
                         </p>
+
                     </div>
+
+
                 </div>
+
+
             </div>
         </div>
     )

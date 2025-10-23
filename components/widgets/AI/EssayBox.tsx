@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,6 +17,9 @@ import {
   Sparkles,
   CheckSquare
 } from 'lucide-react';
+import { useEssayModeStore } from '@/stores/essayMode';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 
 interface EssayBoxProps {
   title?: string;
@@ -55,290 +58,142 @@ export const EssayBox: React.FC<EssayBoxProps> = ({
   readOnly = false,
   initialValue = ""
 }) => {
-  const [essay, setEssay] = useState(initialValue);
-  const [wordCount, setWordCount] = useState(0);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isCheckingGrammar, setIsCheckingGrammar] = useState(false);
-  const [isAnalyzingStructure, setIsAnalyzingStructure] = useState(false);
-  const [isHumanizing, setIsHumanizing] = useState(false);
-  const [isGeneratingOutline, setIsGeneratingOutline] = useState(false);
-  const [essayType, setEssayType] = useState(defaultEssayType);
-  const [essayLength, setEssayLength] = useState(defaultLength);
-  const [topic, setTopic] = useState("");
-  const [showOutline, setShowOutline] = useState(false);
-  const [outlineData, setOutlineData] = useState<any>(null);
-  const [grammarResult, setGrammarResult] = useState<any>(null);
-  const [structureResult, setStructureResult] = useState<any>(null);
+  const {
+    essay,
+    wordCount,
+    characterCount,
+    isGenerating,
+    isCheckingGrammar,
+    isAnalyzingStructure,
+    isHumanizing,
+    isGeneratingOutline,
+    essayType,
+    essayLength,
+    topic,
+    selectedStyle,
+    availableStyles,
+    showOutline,
+    outlineData,
+    grammarResult,
+    structureResult,
+    maxLength: storeMaxLength,
+    showWordCount: storeShowWordCount,
+    showGrammarCheck: storeShowGrammarCheck,
+    showStructureAnalysis: storeShowStructureAnalysis,
+    showHumanizeOption: storeShowHumanizeOption,
+    showOutlineGeneration: storeShowOutlineGeneration,
+    setEssay,
+    setTopic,
+    setEssayType,
+    setEssayLength,
+    generateEssay,
+    generateOutline,
+    checkGrammar,
+    analyzeStructure,
+    humanizeText,
+    setShowOutline,
+    copyEssay,
+    downloadEssay,
+    setMaxLength
+  } = useEssayModeStore();
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isUsingChatGeneration, setIsUsingChatGeneration] = useState(false);
 
+  // Initialize useChat hook for streaming essay generation
+  const { messages, sendMessage, status } = useChat({
+    transport: new DefaultChatTransport({
+      api: '/api/ai/essay',
+    }),
+    onFinish: () => {
+      setIsUsingChatGeneration(false);
+    },
+    onError: (error) => {
+      console.error('Chat generation error:', error);
+      setIsUsingChatGeneration(false);
+    }
+  });
+
+  // Initialize store with props if needed
   useEffect(() => {
-    const words = essay.trim().split(/\s+/).filter(word => word.length > 0).length;
-    setWordCount(words);
-    onEssayChange?.(essay);
-  }, [essay, onEssayChange]);
-
-  const handleGenerateEssay = async () => {
-    if (!topic.trim()) return;
-    
-    setIsGenerating(true);
-    try {
-      const response = await fetch('/api/ai/essay', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'generate',
-          prompt: topic,
-          essayType,
-          length: essayLength
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to generate essay');
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let generatedText = '';
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-          
-          for (const line of lines) {
-            if (line.startsWith('0:')) {
-              const content = line.slice(2);
-              try {
-                const parsed = JSON.parse(content);
-                if (parsed.text) {
-                  generatedText += parsed.text;
-                  setEssay(generatedText);
-                }
-              } catch (e) {
-                // Skip parsing errors
-              }
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error generating essay:', error);
-    } finally {
-      setIsGenerating(false);
+    if (initialValue && essay === '') {
+      setEssay(initialValue);
     }
+    if (maxLength !== storeMaxLength) {
+      setMaxLength(maxLength);
+    }
+  }, [initialValue, essay, maxLength, storeMaxLength, setEssay, setMaxLength]);
+
+  // Handle essay change with callback
+  const handleEssayChange = (value: string) => {
+    setEssay(value);
+    onEssayChange?.(value);
   };
 
+  // Handle grammar check with callback
   const handleGrammarCheck = async () => {
-    if (!essay.trim()) return;
-    
-    setIsCheckingGrammar(true);
-    try {
-      const response = await fetch('/api/ai/essay', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'grammar',
-          text: essay
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to check grammar');
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let resultText = '';
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value);
-          resultText += chunk;
-        }
-      }
-
-      try {
-        const result = JSON.parse(resultText);
-        setGrammarResult(result);
-        onGrammarCheck?.(result);
-      } catch (e) {
-        console.error('Error parsing grammar result:', e);
-      }
-    } catch (error) {
-      console.error('Error checking grammar:', error);
-    } finally {
-      setIsCheckingGrammar(false);
+    await checkGrammar();
+    if (grammarResult) {
+      onGrammarCheck?.(grammarResult);
     }
   };
 
+  // Handle structure analysis with callback
   const handleStructureAnalysis = async () => {
-    if (!essay.trim()) return;
-    
-    setIsAnalyzingStructure(true);
-    try {
-      const response = await fetch('/api/ai/essay', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'structure',
-          text: essay
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to analyze structure');
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let resultText = '';
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value);
-          resultText += chunk;
-        }
-      }
-
-      try {
-        const result = JSON.parse(resultText);
-        setStructureResult(result);
-        onStructureAnalysis?.(result);
-      } catch (e) {
-        console.error('Error parsing structure result:', e);
-      }
-    } catch (error) {
-      console.error('Error analyzing structure:', error);
-    } finally {
-      setIsAnalyzingStructure(false);
+    await analyzeStructure();
+    if (structureResult) {
+      onStructureAnalysis?.(structureResult);
     }
   };
 
-  const handleHumanize = async (strength: 'light' | 'medium' | 'strong' = 'medium') => {
-    if (!essay.trim()) return;
-    
-    setIsHumanizing(true);
-    try {
-      const response = await fetch('/api/ai/essay', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'humanize',
-          text: essay,
-          strength
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to humanize text');
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let humanizedText = '';
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-          
-          for (const line of lines) {
-            if (line.startsWith('0:')) {
-              const content = line.slice(2);
-              try {
-                const parsed = JSON.parse(content);
-                if (parsed.text) {
-                  humanizedText += parsed.text;
-                  setEssay(humanizedText);
-                }
-              } catch (e) {
-                // Skip parsing errors
-              }
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error humanizing text:', error);
-    } finally {
-      setIsHumanizing(false);
-    }
-  };
-
-  const handleGenerateOutline = async () => {
+  // Handle streaming essay generation with useChat
+  const handleStreamingGenerateEssay = () => {
     if (!topic.trim()) return;
     
-    setIsGeneratingOutline(true);
-    try {
-      const response = await fetch('/api/ai/essay', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'outline',
-          prompt: topic,
+    setIsUsingChatGeneration(true);
+    setEssay(''); // Clear existing essay
+    
+    // Send message with essay parameters using the existing API route
+    sendMessage(
+      { text: topic },
+      {
+        body: {
+          type: 'generate',
           essayType,
-          length: essayLength
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to generate outline');
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let resultText = '';
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value);
-          resultText += chunk;
+          length: essayLength,
+          topic
         }
       }
+    );
+  };
 
-      try {
-        const result = JSON.parse(resultText);
-        setOutlineData(result);
-        setShowOutline(true);
-      } catch (e) {
-        console.error('Error parsing outline result:', e);
+  // Extract essay text from chat messages
+  const getEssayFromMessages = () => {
+    const assistantMessages = messages.filter(m => m.role === 'assistant');
+    if (assistantMessages.length === 0) return '';
+    
+    return assistantMessages
+      .map(msg =>
+        msg.parts
+          .filter(part => part.type === 'text')
+          .map(part => (part as any).text)
+          .join('')
+      )
+      .join('\n\n');
+  };
+
+  // Update essay when chat messages change
+  useEffect(() => {
+    if (isUsingChatGeneration && messages.length > 0) {
+      const essayText = getEssayFromMessages();
+      if (essayText) {
+        setEssay(essayText);
       }
-    } catch (error) {
-      console.error('Error generating outline:', error);
-    } finally {
-      setIsGeneratingOutline(false);
     }
-  };
+  }, [messages, isUsingChatGeneration, setEssay]);
 
-  const handleCopyEssay = () => {
-    navigator.clipboard.writeText(essay);
-  };
-
-  const handleDownloadEssay = () => {
-    const blob = new Blob([essay], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'essay.txt';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  // Determine if currently generating
+  const isCurrentlyGenerating = isGenerating || isUsingChatGeneration || status === 'streaming';
 
   return (
     <Card className={`futuristic-card w-full ${className}`}>
@@ -349,14 +204,17 @@ export const EssayBox: React.FC<EssayBoxProps> = ({
           </div>
           {title}
           <div className="ml-auto flex items-center gap-2">
-            {showWordCount && (
+            {(showWordCount && storeShowWordCount) && (
               <Badge variant="outline" className="futuristic-button">
                 {wordCount} words
               </Badge>
             )}
-            <Badge variant="outline" className="futuristic-button">
-              {essayType}
-            </Badge>
+            {selectedStyle && (
+              <Badge variant="outline" className="futuristic-button">
+                {availableStyles.find(s => s.value === selectedStyle)?.label}
+              </Badge>
+            )}
+
           </div>
         </CardTitle>
       </CardHeader>
@@ -369,14 +227,14 @@ export const EssayBox: React.FC<EssayBoxProps> = ({
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               className="flex-1 min-h-[60px]"
-              disabled={isGenerating}
+              disabled={isCurrentlyGenerating}
             />
             <Button
-              onClick={handleGenerateEssay}
-              disabled={isGenerating || !topic.trim()}
+              onClick={handleStreamingGenerateEssay}
+              disabled={isCurrentlyGenerating || !topic.trim()}
               className="futuristic-button"
             >
-              {isGenerating ? (
+              {isCurrentlyGenerating ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Sparkles className="h-4 w-4" />
@@ -386,36 +244,43 @@ export const EssayBox: React.FC<EssayBoxProps> = ({
           </div>
           
           <div className="flex flex-wrap gap-2">
-            <select
-              value={essayType}
-              onChange={(e) => setEssayType(e.target.value as any)}
-              className="px-3 py-1 rounded-md border border-input bg-background text-sm"
-              disabled={isGenerating}
-            >
-              <option value="argumentative">Argumentative</option>
-              <option value="expository">Expository</option>
-              <option value="narrative">Narrative</option>
-              <option value="descriptive">Descriptive</option>
-              <option value="compare">Compare & Contrast</option>
-            </select>
+            {selectedStyle ? (
+              <div className="px-3 py-1 rounded-md border border-input bg-background text-sm flex items-center gap-2">
+                <span>Style: {availableStyles.find(s => s.value === selectedStyle)?.label}</span>
+                <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${availableStyles.find(s => s.value === selectedStyle)?.color}`}></div>
+              </div>
+            ) : (
+              <select
+                value={essayType}
+                onChange={(e) => setEssayType(e.target.value as any)}
+                className="px-3 py-1 rounded-md border border-input bg-background text-sm"
+                disabled={isCurrentlyGenerating}
+              >
+                <option value="argumentative">Argumentative</option>
+                <option value="expository">Expository</option>
+                <option value="narrative">Narrative</option>
+                <option value="descriptive">Descriptive</option>
+                <option value="compare">Compare & Contrast</option>
+              </select>
+            )}
             
             <select
               value={essayLength}
               onChange={(e) => setEssayLength(e.target.value as any)}
               className="px-3 py-1 rounded-md border border-input bg-background text-sm"
-              disabled={isGenerating}
+              disabled={isCurrentlyGenerating}
             >
               <option value="short">Short (300-500 words)</option>
               <option value="medium">Medium (600-900 words)</option>
               <option value="long">Long (1000-1500 words)</option>
             </select>
             
-            {showOutlineGeneration && (
+            {(showOutlineGeneration && storeShowOutlineGeneration) && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleGenerateOutline}
-                disabled={isGeneratingOutline || !topic.trim()}
+                onClick={generateOutline}
+                disabled={isGeneratingOutline || !topic.trim() || isCurrentlyGenerating}
                 className="futuristic-button"
               >
                 {isGeneratingOutline ? (
@@ -466,28 +331,28 @@ export const EssayBox: React.FC<EssayBoxProps> = ({
         <div className="relative">
           <Textarea
             ref={textareaRef}
-            value={essay}
-            onChange={(e) => setEssay(e.target.value.slice(0, maxLength))}
-            placeholder={placeholder}
+            value={isUsingChatGeneration ? getEssayFromMessages() : essay}
+            onChange={(e) => !isUsingChatGeneration && handleEssayChange(e.target.value.slice(0, storeMaxLength))}
+            placeholder={isUsingChatGeneration ? "Generating essay..." : placeholder}
             className="min-h-[300px] resize-none"
-            readOnly={readOnly}
-            maxLength={maxLength}
+            readOnly={readOnly || isUsingChatGeneration}
+            maxLength={storeMaxLength}
           />
-          {showWordCount && (
+          {(showWordCount && storeShowWordCount) && (
             <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
-              {essay.length}/{maxLength} characters
+              {characterCount}/{storeMaxLength} characters
             </div>
           )}
         </div>
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-2">
-          {showGrammarCheck && (
+          {(showGrammarCheck && storeShowGrammarCheck) && (
             <Button
               variant="outline"
               size="sm"
               onClick={handleGrammarCheck}
-              disabled={isCheckingGrammar || !essay.trim()}
+              disabled={isCheckingGrammar || !essay.trim() || isCurrentlyGenerating}
               className="futuristic-button"
             >
               {isCheckingGrammar ? (
@@ -499,12 +364,12 @@ export const EssayBox: React.FC<EssayBoxProps> = ({
             </Button>
           )}
           
-          {showStructureAnalysis && (
+          {(showStructureAnalysis && storeShowStructureAnalysis) && (
             <Button
               variant="outline"
               size="sm"
               onClick={handleStructureAnalysis}
-              disabled={isAnalyzingStructure || !essay.trim()}
+              disabled={isAnalyzingStructure || !essay.trim() || isCurrentlyGenerating}
               className="futuristic-button"
             >
               {isAnalyzingStructure ? (
@@ -516,13 +381,13 @@ export const EssayBox: React.FC<EssayBoxProps> = ({
             </Button>
           )}
           
-          {showHumanizeOption && (
+          {(showHumanizeOption && storeShowHumanizeOption) && (
             <div className="flex gap-1">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleHumanize('light')}
-                disabled={isHumanizing || !essay.trim()}
+                onClick={() => humanizeText('light')}
+                disabled={isHumanizing || !essay.trim() || isCurrentlyGenerating}
                 className="futuristic-button"
               >
                 {isHumanizing ? (
@@ -538,7 +403,7 @@ export const EssayBox: React.FC<EssayBoxProps> = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={handleCopyEssay}
+            onClick={copyEssay}
             disabled={!essay.trim()}
             className="futuristic-button"
           >
@@ -549,7 +414,7 @@ export const EssayBox: React.FC<EssayBoxProps> = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={handleDownloadEssay}
+            onClick={downloadEssay}
             disabled={!essay.trim()}
             className="futuristic-button"
           >

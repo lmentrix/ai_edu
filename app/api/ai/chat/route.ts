@@ -6,12 +6,13 @@ const google = createGoogleGenerativeAI({
 });
 
 
+
 export async function POST(request: Request) {
     const { messages }: { messages: UIMessage[] } = await request.json();
 
     const result = streamText({
         model: google('gemini-2.5-flash'),
-        system: 'You are a friendly assistant!',
+        system: 'write as this mode',
         messages: convertToModelMessages(messages),
         stopWhen: stepCountIs(5),
     });

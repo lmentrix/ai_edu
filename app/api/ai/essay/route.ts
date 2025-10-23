@@ -1,12 +1,21 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { streamText } from 'ai';
+import { streamText, convertToModelMessages, UIMessage } from 'ai';
 
 const google = createGoogleGenerativeAI({
     apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
 });
 
 export async function POST(request: Request) {
-    const { type, prompt, essayType, length, topic, text, strength } = await request.json(); // Flexible: prompt/topic for generation, text for analysis
+    const { type, prompt, essayType, length, topic, text, strength, messages }: {
+        type?: string;
+        prompt?: string;
+        essayType?: string;
+        length?: string;
+        topic?: string;
+        text?: string;
+        strength?: string;
+        messages?: UIMessage[];
+    } = await request.json();
 
     // Shared error response helper
     const sendError = (message: string, status = 400) =>
@@ -17,69 +26,155 @@ export async function POST(request: Request) {
 
     // Base essay generation logic (for 'generate' type)
     const generateEssay = async () => {
-        const lengthMap = {
-            short: 'approximately 300-500 words (3-4 paragraphs)',
-            medium: 'approximately 600-900 words (5-7 paragraphs)',
-            long: 'approximately 1000-1500 words (8-10 paragraphs)',
+        const lengthDetails: Record<string, { words: string; paragraphs: string; structure: string }> = {
+            short: {
+                words: '300-500 words',
+                paragraphs: '3-4 paragraphs',
+                structure: 'Introduction (1 paragraph), Body (1-2 paragraphs), Conclusion (1 paragraph)'
+            },
+            medium: {
+                words: '600-900 words',
+                paragraphs: '5-7 paragraphs',
+                structure: 'Introduction (1 paragraph), Body (3-5 paragraphs), Conclusion (1 paragraph)'
+            },
+            long: {
+                words: '1000-1500 words',
+                paragraphs: '8-10 paragraphs',
+                structure: 'Introduction (1-2 paragraphs), Body (6-7 paragraphs), Conclusion (1-2 paragraphs)'
+            },
         };
 
-        const essayTypeMap = {
-            argumentative: 'argumentative essay with a clear thesis statement, supporting evidence, counterarguments, and refutation',
-            expository: 'expository essay that explains a topic in a balanced and informative way with clear examples',
-            narrative: 'narrative essay that tells a compelling story with personal insights, vivid descriptions, and emotional impact',
-            descriptive: 'descriptive essay that paints a vivid picture with sensory details, spatial organization, and imagery',
-            compare: 'compare and contrast essay that examines similarities and differences between subjects with balanced analysis',
+        const essayTypePrompts: Record<string, {
+            description: string;
+            structure: string;
+            tone: string;
+            techniques: string;
+            exampleIntro: string;
+        }> = {
+            argumentative: {
+                description: 'persuasive argumentative essay that takes a clear position on a controversial topic',
+                structure: 'Begin with a compelling hook that presents the controversy, state your clear thesis in the introduction, dedicate each body paragraph to a specific argument with evidence, address and refute counterarguments, and conclude with a powerful restatement of your position and call to action.',
+                tone: 'Confident, authoritative, evidence-based, and persuasive',
+                techniques: 'Use logical reasoning (logos), emotional appeals (pathos), and establish credibility (ethos). Incorporate statistical data, expert opinions, and real-world examples.',
+                exampleIntro: 'In an era where [topic controversy], one position stands out as both logically sound and ethically compelling: [your thesis].'
+            },
+            expository: {
+                description: 'informative expository essay that thoroughly explains a complex topic',
+                structure: 'Start with a clear definition of your topic in the introduction, organize body paragraphs around distinct aspects of the topic, use the compare-contrast, cause-effect, or problem-solution structure as appropriate, and conclude with a synthesis of key points and their broader significance.',
+                tone: 'Objective, informative, analytical, and educational',
+                techniques: 'Use clear topic sentences, provide concrete examples and data, define specialized terminology, and maintain a neutral perspective while thoroughly covering all facets of the topic.',
+                exampleIntro: 'Understanding [topic] requires examining its fundamental components, historical development, and contemporary implications.'
+            },
+            narrative: {
+                description: 'compelling narrative essay that tells a meaningful personal story',
+                structure: 'Create a narrative arc with vivid exposition that establishes context, build rising action through specific scenes and dialogue, reach a climactic moment of realization or transformation, include falling action that shows consequences, and end with resolution that reflects on the story\'s significance.',
+                tone: 'Personal, reflective, evocative, and authentic',
+                techniques: 'Use sensory details, dialogue, specific anecdotes, temporal transitions, and introspective reflection. Show rather than tell through concrete scenes and actions.',
+                exampleIntro: 'The moment that changed everything began like any other [ordinary circumstance], but by its end, [transformation].'
+            },
+            descriptive: {
+                description: 'vivid descriptive essay that creates a powerful sensory impression',
+                structure: 'Organize spatially (near to far, inside to outside) or by importance (most striking to least striking), begin with an overall impression, dedicate body paragraphs to different sensory dimensions or aspects of the subject, and conclude with the emotional impact or significance of what you\'ve described.',
+                tone: 'Evocative, immersive, detailed, and atmospheric',
+                techniques: 'Engage all five senses, use figurative language (metaphors, similes, personification), select precise adjectives and verbs, and create a dominant mood.',
+                exampleIntro: 'To truly understand [subject], one must experience it through every sense—seeing, hearing, smelling, tasting, and touching.'
+            },
+            compare: {
+                description: 'insightful compare and contrast essay that reveals meaningful relationships between subjects',
+                structure: 'Choose either point-by-point (alternating between subjects) or block method (all about one subject, then all about the other). Begin with a clear thesis that states the significance of the comparison, use parallel structure for balanced treatment, and conclude with insights about the relationship or evaluation of which subject is superior in certain respects.',
+                tone: 'Analytical, balanced, evaluative, and insightful',
+                techniques: 'Use transition words for comparison (similarly, likewise) and contrast (however, in contrast), establish clear criteria for comparison, and draw meaningful conclusions from similarities and differences.',
+                exampleIntro: 'While [subject A] and [subject B] may appear similar at first glance, a closer examination reveals crucial differences in [key aspects].'
+            },
         };
 
-        const structureGuidance = {
-            argumentative: 'Start with a compelling hook, present your thesis clearly, provide 3-4 body paragraphs each with a topic sentence and supporting evidence, address counterarguments, and end with a strong conclusion.',
-            expository: 'Begin with an introduction that defines your topic, follow with 3-4 body paragraphs that each explore a different aspect, use clear examples, and conclude with a summary of key points.',
-            narrative: 'Create a narrative arc with exposition, rising action, climax, falling action, and resolution. Use descriptive language and dialogue to bring your story to life.',
-            descriptive: 'Organize your description spatially or by importance. Use all five senses to create a vivid impression. Show rather than tell through specific details.',
-            compare: 'Structure your comparison either point-by-point or subject-by-subject. Ensure balanced treatment of both subjects and provide meaningful insights about their relationship.',
-        };
+        const defaultType = (essayType as string) || 'expository';
+        const defaultLength = (length as string) || 'medium';
+        
+        const lengthInfo = lengthDetails[defaultLength];
+        const typeInfo = essayTypePrompts[defaultType];
 
-        const defaultType = essayType || 'expository';
-        const defaultLength = length || 'medium';
+        // Calculate approximate words per paragraph for guidance
+        const wordCount = lengthInfo.words.split('-').map(w => parseInt(w));
+        const avgWords = Math.round((wordCount[0] + wordCount[1]) / 2);
+        const paragraphCount = parseInt(lengthInfo.paragraphs.split('-')[1]);
+        const wordsPerParagraph = Math.round(avgWords / paragraphCount);
 
-        const systemPrompt = `You are an expert academic writer with extensive experience in crafting high-quality essays. Write an exceptional ${essayTypeMap["descriptive"]} that is ${lengthMap["medium"]}.
+        const systemPrompt = `You are an expert academic writer with extensive experience in crafting high-quality essays. Your task is to write an exceptional ${typeInfo.description} that is exactly ${lengthInfo.words} (${lengthInfo.paragraphs}).
 
-STRUCTURE REQUIREMENTS:
-${structureGuidance["expository"]}
+ESSAY STRUCTURE:
+${lengthInfo.structure}
+Each paragraph should be approximately ${wordsPerParagraph} words.
 
-QUALITY STANDARDS:
-- Use sophisticated vocabulary and varied sentence structures
-- Include smooth transitions between paragraphs
-- Provide specific examples, evidence, or details to support your points
-- Maintain a consistent tone and voice throughout
-- Ensure logical flow and coherence
-- Use proper academic formatting
+STYLE-SPECIFIC REQUIREMENTS:
+${typeInfo.structure}
 
-CONTENT GUIDELINES:
+TONE AND VOICE:
+Maintain a ${typeInfo.tone} throughout the essay.
+
+LITERARY TECHNIQUES:
+${typeInfo.techniques}
+
+CONTENT STANDARDS:
 - Develop a clear, focused thesis that guides your entire essay
-- Each paragraph should explore a single main idea
-- Use engaging hooks in your introduction
-- End with a memorable conclusion that reinforces your thesis
-- Avoid clichés and generic statements
-- Demonstrate critical thinking and deep analysis
+- Each paragraph should explore a single main idea with a strong topic sentence
+- Provide specific examples, evidence, or details to support your points
+- Include smooth transitions between paragraphs using appropriate transition words and phrases
+- Use sophisticated vocabulary and varied sentence structures (simple, compound, complex, and compound-complex)
+- Demonstrate critical thinking and deep analysis of the topic
+- Avoid clichés, generic statements, and superficial observations
+- Ensure logical flow and coherence from introduction to conclusion
+
+INTRODUCTION REQUIREMENTS:
+- Begin with an engaging hook that captures the reader's attention
+- Provide necessary background context for your topic
+- End with a clear thesis statement that presents your main argument or purpose
+Example approach: "${typeInfo.exampleIntro}"
+
+BODY PARAGRAPH REQUIREMENTS:
+- Each paragraph should begin with a clear topic sentence that connects to the thesis
+- Provide 2-3 pieces of supporting evidence (facts, statistics, examples, quotes)
+- Include analysis that explains how the evidence supports your topic sentence
+- End each paragraph with a concluding thought or transition to the next paragraph
+
+CONCLUSION REQUIREMENTS:
+- Restate your thesis in a fresh way (don't simply repeat it)
+- Summarize your main points without introducing new information
+- End with a memorable final thought, call to action, or implication for the future
 
 FORMATTING:
 - Write in standard paragraph format without headings or section markers
 - Use proper indentation for new paragraphs
 - Ensure your essay flows naturally from one idea to the next
+- Maintain consistent formatting throughout
 
-Please write a compelling, well-structured essay on the given topic that demonstrates advanced writing skills and deep understanding of the subject matter.`;
+Write a compelling, well-structured essay on the given topic that demonstrates advanced writing skills and deep understanding of the subject matter. Focus on creating a piece that is both informative and engaging, with a clear voice and purpose.`;
 
         try {
+            // Support both chat messages and simple prompt/topic
+            let essayPrompt = prompt || topic;
+            
+            // If chat messages are provided, extract the topic from the last user message
+            if (messages && messages.length > 0) {
+                const lastUserMessage = messages.filter((m: UIMessage) => m.role === 'user').pop();
+                if (lastUserMessage) {
+                    const textPart = lastUserMessage.parts.find((p: any) => p.type === 'text');
+                    if (textPart) {
+                        essayPrompt = (textPart as any).text;
+                    }
+                }
+            }
+
             const result = streamText({
                 model: google('gemini-2.5-flash'),
                 system: systemPrompt,
-                prompt: `Write an essay about: ${prompt || topic}`,
-                temperature: 0.7, // Balanced creativity for essays (per docs: 0-1 range)
-                maxOutputTokens: defaultLength === 'long' ? 3000 : defaultLength === 'medium' ? 2000 : 1000, // Dynamic tokens based on length (Gemini limit ~8k+)
+                // Use messages if provided (chat mode), otherwise use simple prompt
+                ...(messages ? { messages: convertToModelMessages(messages) } : { prompt: `Write an essay about: ${essayPrompt}` }),
+                temperature: 0.7,
+                maxOutputTokens: defaultLength === 'long' ? 3000 : defaultLength === 'medium' ? 2000 : 1000,
             });
 
-            return result.toUIMessageStreamResponse(); // UI-friendly SSE stream (text-delta chunks)
+            return result.toUIMessageStreamResponse();
         } catch (error) {
             console.error('Essay generation error:', error);
             return sendError('Failed to generate essay', 500);
@@ -201,13 +296,15 @@ Essay text: ${text}`;
         if (!text) return sendError('Text is required for humanization');
         if (!strength) return sendError('Strength is required for humanization');
 
-        const strengthMap = {
+        const strengthMap: Record<string, string> = {
             light: 'Make mild adjustments to sound more natural while preserving original meaning and structure.',
             medium: 'Rephrase for natural flow, vary sentence structure, and add subtle human-like nuances.',
             strong: 'Completely rewrite to sound authentically human, with varied vocabulary and personal touch, but keep core ideas intact.',
         };
 
-        const systemPrompt = `You are a writing assistant specializing in humanizing AI-generated text. Rewrite the following text to make it sound more natural and human-written, applying ${strengthMap["medium"]} changes. Output ONLY the rewritten text (no explanations or JSON).
+        const defaultStrength = (strength as string) || 'medium';
+
+        const systemPrompt = `You are a writing assistant specializing in humanizing AI-generated text. Rewrite the following text to make it sound more natural and human-written, applying ${strengthMap[defaultStrength]} changes. Output ONLY the rewritten text (no explanations or JSON).
 
 Original text: ${text}`;
 
@@ -231,14 +328,14 @@ Original text: ${text}`;
     const generateOutline = async () => {
         if (!prompt && !topic) return sendError('Topic is required for outline generation');
 
-        const lengthMap = {
+        const lengthMap: Record<string, string> = {
             short: '3-4 paragraphs, concise',
             medium: '5-7 paragraphs, standard',
             long: '8-10 paragraphs, detailed',
         };
 
-        const defaultLength = length || 'medium';
-        const defaultType = essayType || 'expository';
+        const defaultLength = (length as string) || 'medium';
+        const defaultType = (essayType as string) || 'expository';
 
         const systemPrompt = `You are an expert essay planner. Generate a detailed outline for a ${defaultType} essay on the topic "${prompt || topic}", aiming for ${lengthMap["medium"]}. Respond ONLY with valid JSON in this exact format (no extra text):
 
@@ -284,24 +381,36 @@ Ensure the outline is logical, comprehensive, and tailored to the essay type.`;
         }
     };
 
+    // Chat-based essay generation (for useChat hook)
+    const chatGenerateEssay = async () => {
+        // For chat mode, we use the same logic but with messages
+        return await generateEssay();
+    };
+
     // Route based on type (single route handles multiple types for simplicity and modularity)
     try {
-        switch (type) {
-            case 'generate':
-                return await generateEssay();
-            case 'grammar':
-                return await checkGrammar();
-            case 'structure':
-                return await analyzeStructure();
-            case 'humanize':
-                return await humanizeText();
-            case 'outline':
-                return await generateOutline();
-            default:
-                return sendError('Invalid request type. Supported: generate, grammar, structure, humanize, outline');
+        // Support both legacy type-based routing and new chat-based routing
+        if (type === 'generate' || (!type && messages)) {
+            return await generateEssay();
+        } else if (type) {
+            switch (type) {
+                case 'grammar':
+                    return await checkGrammar();
+                case 'structure':
+                    return await analyzeStructure();
+                case 'humanize':
+                    return await humanizeText();
+                case 'outline':
+                    return await generateOutline();
+                default:
+                    return sendError('Invalid request type. Supported: generate, grammar, structure, humanize, outline');
+            }
+        } else {
+            // Default to essay generation if no type is specified
+            return await generateEssay();
         }
     } catch (error) {
-        console.error(`Error in ${type} handler:`, error);
-        return sendError(`Failed to process ${type} request`, 500);
+        console.error(`Error in ${type || 'essay generation'} handler:`, error);
+        return sendError(`Failed to process ${type || 'essay generation'} request`, 500);
     }
 }
